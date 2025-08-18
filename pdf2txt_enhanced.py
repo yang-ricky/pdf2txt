@@ -13,18 +13,19 @@ import pytesseract
 from pdf2image import convert_from_path
 import click
 from pathlib import Path
-from content_filter_hybrid import HybridContentFilter
+from filters import get_filter
 
 
 class UniversalOCRConverter:
     """通用OCR文字处理器 - 支持PDF和图片文件"""
     
-    def __init__(self, dpi=300, lang='chi_sim+eng'):
+    def __init__(self, dpi=300, lang='chi_sim+eng', filter_name='default'):
         self.dpi = dpi
         self.lang = lang
         self.max_chunk_height = 10000
         self.chunk_overlap = 50
-        self.content_filter = HybridContentFilter()
+        self.filter_name = filter_name
+        self.content_filter = get_filter(filter_name)
         self.tesseract_config = (
             '--oem 3 --psm 6 '
             '-c tessedit_char_blacklist=| '
@@ -41,6 +42,7 @@ class UniversalOCRConverter:
         # 检测文件类型并获取图像
         file_type = self._detect_file_type(input_path)
         print(f"🔍 检测到文件类型: {file_type}")
+        print(f"🔧 使用过滤器: {self.filter_name}")
         
         if file_type == 'pdf':
             print("🔄 转换PDF为图片...")
@@ -233,7 +235,8 @@ class UniversalOCRConverter:
 @click.command()
 @click.argument('input_path', type=click.Path(exists=True))
 @click.option('-o', '--output', help='输出文件路径')
-def main(input_path, output):
+@click.option('--filter', 'filter_name', default='default', help='指定过滤器名称 (默认: default)')
+def main(input_path, output, filter_name):
     """通用OCR转文字工具 - 支持PDF和图片文件"""
     
     # 确定输出路径
@@ -242,7 +245,7 @@ def main(input_path, output):
         output = f"{input_name}_converted.txt"
     
     # 处理
-    converter = UniversalOCRConverter()
+    converter = UniversalOCRConverter(filter_name=filter_name)
     try:
         result_path = converter.convert(input_path, output)
         print(f"\n🎉 成功转换: {result_path}")

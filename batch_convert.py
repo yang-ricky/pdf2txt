@@ -57,7 +57,7 @@ def is_already_processed(input_file, output_dir):
     return txt_path.exists()
 
 
-def convert_file(input_file, output_dir):
+def convert_file(input_file, output_dir, filter_name='default'):
     """转换单个文件 (PDF或图片)"""
     txt_name = input_file.stem + "_converted.txt"
     txt_path = output_dir / txt_name
@@ -67,7 +67,7 @@ def convert_file(input_file, output_dir):
     # 构建命令 - 使用增强版本
     cmd = [
         "bash", "-c",
-        f"source venv/bin/activate && python pdf2txt_enhanced.py '{input_file}' -o '{txt_path}'"
+        f"source venv/bin/activate && python pdf2txt_enhanced.py '{input_file}' -o '{txt_path}' --filter={filter_name}"
     ]
     
     try:
@@ -97,11 +97,14 @@ def main():
     parser.add_argument("source_dir", help="包含文件的源文件夹路径 (支持PDF/JPG/PNG/BMP/TIFF)")
     parser.add_argument("--force", "-f", action="store_true", 
                        help="强制重新转换已存在的文件")
+    parser.add_argument("--filter", default="default",
+                       help="指定过滤器名称 (默认: default)")
     
     args = parser.parse_args()
     
     print("=== 批量文件转换工具 (PDF+图片) ===")
     print(f"源文件夹: {args.source_dir}")
+    print(f"过滤器: {args.filter}")
     
     # 查找支持的文件
     supported_files = find_supported_files(args.source_dir)
@@ -132,7 +135,7 @@ def main():
             continue
         
         # 执行转换
-        success = convert_file(input_file, output_dir)
+        success = convert_file(input_file, output_dir, args.filter)
         
         if success:
             processed_count += 1
