@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 通用OCR转文字工具 - 支持PDF和图片文件
 兼容已有功能，增强小尺寸PDF识别，新增图片文件直接转换
@@ -69,16 +70,20 @@ class UniversalOCRConverter:
         # 混合内容过滤 - 优先处理"划重点"边界
         filtered_text = self.content_filter.extract_main_content(raw_text)
         
-        # 4KB阈值保护机制
-        filtered_char_count = len(filtered_text.replace(' ', '').replace('\n', ''))
-        raw_char_count = len(raw_text.replace(' ', '').replace('\n', ''))
-        
-        if filtered_char_count < 4096:  # 4KB阈值
-            print(f"⚠️  过滤后内容过少 ({filtered_char_count} < 4096 字符)")
-            print(f"🔄 启用保护机制，使用原始文本 ({raw_char_count} 字符)")
-            final_text = raw_text
-        else:
+        # 4KB阈值保护机制 - djg过滤器跳过保护
+        if self.filter_name == 'djg':
+            print(f"✅ DJG过滤器跳过保护机制 ({len(filtered_text.replace(' ', '').replace('\n', ''))} 字符)")
             final_text = filtered_text
+        else:
+            filtered_char_count = len(filtered_text.replace(' ', '').replace('\n', ''))
+            raw_char_count = len(raw_text.replace(' ', '').replace('\n', ''))
+            
+            if filtered_char_count < 4096:  # 4KB阈值
+                print(f"⚠️  过滤后内容过少 ({filtered_char_count} < 4096 字符)")
+                print(f"🔄 启用保护机制，使用原始文本 ({raw_char_count} 字符)")
+                final_text = raw_text
+            else:
+                final_text = filtered_text
         
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(final_text)

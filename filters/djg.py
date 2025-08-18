@@ -16,50 +16,46 @@ class DJGContentFilter(BaseContentFilter):
     
     def extract_main_content(self, text: str) -> str:
         """
-        DJG定制内容提取策略
+        DJG定制内容提取策略 - 以"用户留言"为边界截断
         
         特点：
-        1. 更激进的页眉页脚过滤
-        2. 保留章节标题和编号
-        3. 过滤更多UI元素
-        4. 智能段落合并
+        1. 保留所有原始内容直到"用户留言"
+        2. 智能段落合并
         """
+        print("🔥🔥🔥 DJG过滤器正在工作！！！")
+        
         if not text or not text.strip():
             return ""
         
         lines = text.split('\n')
         filtered_lines = []
+        found_user_comment = False
         
-        for line in lines:
+        for i, line in enumerate(lines):
             line = line.strip()
-            if not line:
-                continue
-            
-            # DJG策略：过滤页眉页脚
-            if self._is_header_footer(line):
-                continue
-            
-            # DJG策略：保留章节标题
-            if self._is_chapter_title(line):
+            if line:  # 只要不是空行就保留
                 filtered_lines.append(line)
-                continue
-            
-            # DJG策略：过滤UI元素
-            if self._is_ui_element(line):
-                continue
-            
-            # DJG策略：过滤时间戳和元数据
-            if self._is_metadata(line):
-                continue
-            
-            # 保留正文内容
-            if self._is_main_content(line):
-                filtered_lines.append(line)
+                # 检查是否包含截断关键字
+                boundary_keywords = ["用户留言", "用尸留言", "后一篇", "前一篇"]
+                found_keyword = None
+                for keyword in boundary_keywords:
+                    if keyword in line:
+                        found_keyword = keyword
+                        break
+                
+                if found_keyword:
+                    print(f"🎯 找到截断边界 '{found_keyword}'！行号: {i}, 内容: '{line}'")
+                    found_user_comment = True
+                    break
         
-        # DJG策略：智能段落合并
-        merged_content = self._merge_paragraphs(filtered_lines)
+        print(f"📊 总共处理了 {len(lines)} 行，保留了 {len(filtered_lines)} 行")
+        if not found_user_comment:
+            print("⚠️ 未找到截断边界关键字！")
         
-        return merged_content
+        # 直接返回，不进行段落合并，避免合并过程中的问题
+        result = '\n'.join(filtered_lines)
+        print(f"🔚 DJG过滤器完成，输出长度: {len(result)}")
+        return result
     
     def _is_header_footer(self, line: str) -> bool:
         """检测页眉页脚"""

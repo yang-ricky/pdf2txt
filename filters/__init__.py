@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 过滤器模块 - 动态加载和管理内容过滤器
 支持插件化扩展，用户可通过添加新的.py文件来扩展过滤规则
@@ -61,6 +62,7 @@ class FilterManager:
             else:
                 raise ValueError(f"过滤器 '{filter_name}' 不存在。可用过滤器: {available}")
         
+        print(f"🎯 正在使用过滤器: {filter_name}")
         return self._filters[filter_name]()
     
     def list_filters(self) -> list:

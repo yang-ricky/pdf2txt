@@ -27,20 +27,7 @@ chmod +x install.sh
 ### 2. 使用
 
 ```bash
-# 激活环境
-source venv/bin/activate
-
-# 基础用法
-python pdf2txt.py your_file.pdf
-
-# 指定输出路径
-python pdf2txt.py input.pdf -o output.txt
-
-# 高清识别 (400 DPI)
-python pdf2txt.py input.pdf --dpi 400
-
-# 最大并行处理
-python pdf2txt.py input.pdf -j 8
+python3 batch_convert.py ./djg --filter=djg --worker=4
 ```
 
 ## 高级配置
