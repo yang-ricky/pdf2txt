@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-PDF转文字工具 - 增强版本
-兼容已有功能，增强小尺寸PDF识别
+通用OCR转文字工具 - 支持PDF和图片文件
+兼容已有功能，增强小尺寸PDF识别，新增图片文件直接转换
 """
 
 import os
@@ -16,8 +16,8 @@ from pathlib import Path
 from content_filter_hybrid import HybridContentFilter
 
 
-class EnhancedPDF2TXT:
-    """增强PDF转文字处理器"""
+class UniversalOCRConverter:
+    """通用OCR文字处理器 - 支持PDF和图片文件"""
     
     def __init__(self, dpi=300, lang='chi_sim+eng'):
         self.dpi = dpi
@@ -33,15 +33,23 @@ class EnhancedPDF2TXT:
             '-c textord_min_linesize=2.5'
         )
         
-    def convert(self, pdf_path, output_path):
-        """转换PDF到文本"""
-        print(f"📄 开始处理: {pdf_path}")
+    def convert(self, input_path, output_path):
+        """转换文件到文本"""
+        print(f"📄 开始处理: {input_path}")
         print(f"🎯 输出路径: {output_path}")
         
-        # 转换PDF到图像
-        print("🔄 转换PDF为图片...")
-        images = self._safe_convert_pdf(pdf_path)
-        print(f"📊 共 {len(images)} 页")
+        # 检测文件类型并获取图像
+        file_type = self._detect_file_type(input_path)
+        print(f"🔍 检测到文件类型: {file_type}")
+        
+        if file_type == 'pdf':
+            print("🔄 转换PDF为图片...")
+            images = self._safe_convert_pdf(input_path)
+            print(f"📊 共 {len(images)} 页")
+        else:  # 图片文件
+            print("🔄 加载图片文件...")
+            images = [self._load_image_file(input_path)]
+            print(f"📊 单个图片文件")
         
         all_text = []
         
@@ -198,23 +206,45 @@ class EnhancedPDF2TXT:
             print(f"    ❌ OCR失败: {e}")
             return ""
     
+    def _detect_file_type(self, file_path):
+        """检测文件类型"""
+        file_path = Path(file_path)
+        suffix = file_path.suffix.lower()
+        
+        if suffix == '.pdf':
+            return 'pdf'
+        elif suffix in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']:
+            return 'image'
+        else:
+            raise ValueError(f"不支持的文件类型: {suffix}")
+    
+    def _load_image_file(self, image_path):
+        """加载图片文件"""
+        try:
+            image = Image.open(image_path)
+            # 确保图片是RGB模式
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            return image
+        except Exception as e:
+            raise Exception(f"图片文件加载失败: {str(e)}")
 
 
 @click.command()
-@click.argument('pdf_path', type=click.Path(exists=True))
+@click.argument('input_path', type=click.Path(exists=True))
 @click.option('-o', '--output', help='输出文件路径')
-def main(pdf_path, output):
-    """增强PDF转文字工具"""
+def main(input_path, output):
+    """通用OCR转文字工具 - 支持PDF和图片文件"""
     
     # 确定输出路径
     if not output:
-        pdf_name = Path(pdf_path).stem
-        output = f"{pdf_name}_enhanced.txt"
+        input_name = Path(input_path).stem
+        output = f"{input_name}_converted.txt"
     
     # 处理
-    converter = EnhancedPDF2TXT()
+    converter = UniversalOCRConverter()
     try:
-        result_path = converter.convert(pdf_path, output)
+        result_path = converter.convert(input_path, output)
         print(f"\n🎉 成功转换: {result_path}")
     except Exception as e:
         print(f"❌ 转换失败: {str(e)}")

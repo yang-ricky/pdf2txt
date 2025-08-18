@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-批量PDF转TXT脚本
+批量文件转TXT脚本 (支持PDF和图片)
 支持断点续传，自动跳过已处理文件
 """
 
@@ -11,24 +11,36 @@ import argparse
 from pathlib import Path
 
 
-def find_pdf_files(source_dir):
-    """查找并排序PDF文件"""
-    pdf_files = []
+def find_supported_files(source_dir):
+    """查找并排序支持的文件 (PDF和图片)"""
+    supported_files = []
     source_path = Path(source_dir)
     
     if not source_path.exists():
         print(f"错误: 源文件夹不存在: {source_dir}")
         return []
     
-    # 查找所有PDF文件
-    for pdf_file in source_path.glob("*.pdf"):
-        pdf_files.append(pdf_file)
+    # 支持的文件扩展名
+    supported_extensions = ['*.pdf', '*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', '*.tif']
     
-    # 按文件名排序
-    pdf_files.sort(key=lambda x: x.name)
+    # 查找所有支持的文件
+    for pattern in supported_extensions:
+        for file in source_path.glob(pattern):
+            supported_files.append(file)
+        # 也查找大写扩展名
+        for file in source_path.glob(pattern.upper()):
+            supported_files.append(file)
     
-    print(f"发现 {len(pdf_files)} 个PDF文件")
-    return pdf_files
+    # 去重并按文件名排序
+    supported_files = list(set(supported_files))
+    supported_files.sort(key=lambda x: x.name)
+    
+    # 统计文件类型
+    pdf_count = len([f for f in supported_files if f.suffix.lower() == '.pdf'])
+    image_count = len(supported_files) - pdf_count
+    
+    print(f"发现 {len(supported_files)} 个文件: {pdf_count} 个PDF, {image_count} 个图片")
+    return supported_files
 
 
 def setup_output_dir():
@@ -38,24 +50,24 @@ def setup_output_dir():
     return output_dir
 
 
-def is_already_processed(pdf_file, output_dir):
+def is_already_processed(input_file, output_dir):
     """检查是否已经处理过"""
-    txt_name = pdf_file.stem + "_converted.txt"
+    txt_name = input_file.stem + "_converted.txt"
     txt_path = output_dir / txt_name
     return txt_path.exists()
 
 
-def convert_pdf(pdf_file, output_dir):
-    """转换单个PDF文件"""
-    txt_name = pdf_file.stem + "_converted.txt"
+def convert_file(input_file, output_dir):
+    """转换单个文件 (PDF或图片)"""
+    txt_name = input_file.stem + "_converted.txt"
     txt_path = output_dir / txt_name
     
-    print(f"转换中: {pdf_file.name} -> {txt_name}")
+    print(f"转换中: {input_file.name} -> {txt_name}")
     
     # 构建命令 - 使用增强版本
     cmd = [
         "bash", "-c",
-        f"source venv/bin/activate && python pdf2txt_enhanced.py '{pdf_file}' -o '{txt_path}'"
+        f"source venv/bin/activate && python pdf2txt_enhanced.py '{input_file}' -o '{txt_path}'"
     ]
     
     try:
@@ -71,30 +83,30 @@ def convert_pdf(pdf_file, output_dir):
             print(f"✅ 成功: {txt_name}")
             return True
         else:
-            print(f"❌ 失败: {pdf_file.name}")
+            print(f"❌ 失败: {input_file.name}")
             print(f"错误信息: {result.stderr}")
             return False
             
     except Exception as e:
-        print(f"❌ 异常: {pdf_file.name} - {str(e)}")
+        print(f"❌ 异常: {input_file.name} - {str(e)}")
         return False
 
 
 def main():
-    parser = argparse.ArgumentParser(description="批量PDF转TXT工具")
-    parser.add_argument("source_dir", help="包含PDF文件的源文件夹路径")
+    parser = argparse.ArgumentParser(description="批量文件转TXT工具 (支持PDF和图片)")
+    parser.add_argument("source_dir", help="包含文件的源文件夹路径 (支持PDF/JPG/PNG/BMP/TIFF)")
     parser.add_argument("--force", "-f", action="store_true", 
                        help="强制重新转换已存在的文件")
     
     args = parser.parse_args()
     
-    print("=== PDF批量转换工具 ===")
+    print("=== 批量文件转换工具 (PDF+图片) ===")
     print(f"源文件夹: {args.source_dir}")
     
-    # 查找PDF文件
-    pdf_files = find_pdf_files(args.source_dir)
-    if not pdf_files:
-        print("没有找到PDF文件，退出")
+    # 查找支持的文件
+    supported_files = find_supported_files(args.source_dir)
+    if not supported_files:
+        print("没有找到支持的文件，退出")
         return
     
     # 设置输出文件夹
@@ -102,25 +114,25 @@ def main():
     print(f"输出文件夹: {output_dir}")
     
     # 统计信息
-    total_files = len(pdf_files)
+    total_files = len(supported_files)
     processed_count = 0
     skipped_count = 0
     failed_count = 0
     
     print(f"\n开始处理 {total_files} 个文件...\n")
     
-    # 逐个处理PDF文件
-    for i, pdf_file in enumerate(pdf_files, 1):
-        print(f"[{i}/{total_files}] {pdf_file.name}")
+    # 逐个处理文件
+    for i, input_file in enumerate(supported_files, 1):
+        print(f"[{i}/{total_files}] {input_file.name}")
         
         # 检查是否已处理
-        if not args.force and is_already_processed(pdf_file, output_dir):
-            print(f"⏭️  跳过: 已存在 {pdf_file.stem}_converted.txt")
+        if not args.force and is_already_processed(input_file, output_dir):
+            print(f"⏭️  跳过: 已存在 {input_file.stem}_converted.txt")
             skipped_count += 1
             continue
         
         # 执行转换
-        success = convert_pdf(pdf_file, output_dir)
+        success = convert_file(input_file, output_dir)
         
         if success:
             processed_count += 1
